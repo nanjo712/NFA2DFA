@@ -132,10 +132,25 @@ class NFAEditor:
             x2_edge = x2 - 20 * math.cos(angle)
             y2_edge = y2 - 20 * math.sin(angle)
 
-            transition = self.canvas.create_line(x1_edge, y1_edge, x2_edge, y2_edge, arrow=tk.LAST)
-            transition_text = self.canvas.create_text((x1 + x2) / 2, (y1 + y2) / 2, text=transition_char, fill='green', font=('Helvetica', 12, 'bold'))
+            if (from_state, to_state) in self.transitions:
+                # Transition already exists, update the label
+                existing_transition, existing_text, existing_chars = self.transitions[(from_state, to_state)]
+                if transition_char in existing_chars:
+                    # Ignore if the transition character already exists
+                    return
+                else:
+                    # Update the existing transition with new characters
+                    new_chars = existing_chars + "+" + transition_char
+                    self.canvas.itemconfig(existing_text, text=new_chars)
+                    self.transitions[(from_state, to_state)] = (existing_transition, existing_text, new_chars)
+            else:
+                # Create a new transition
+                transition = self.canvas.create_line(x1_edge, y1_edge, x2_edge, y2_edge, arrow=tk.LAST)
+                text_x = x2_edge - (x2_edge - x1_edge) / 4
+                text_y = y2_edge - (y2_edge - y1_edge) / 4
+                transition_text = self.canvas.create_text(text_x, text_y, text=transition_char, fill='green', font=('Helvetica', 12, 'bold'))
 
-            self.transitions[(from_state, to_state)] = (transition, transition_text, transition_char)
+                self.transitions[(from_state, to_state)] = (transition, transition_text, transition_char)
 
             self.canvas.itemconfig(self.states[from_state][0], outline='black')
             self.canvas.itemconfig(self.states[to_state][0], outline='black')
@@ -174,7 +189,10 @@ class NFAEditor:
                 y2_edge = y2 - 20 * math.sin(angle)
 
                 self.canvas.coords(transition, x1_edge, y1_edge, x2_edge, y2_edge)
-                self.canvas.coords(transition_text, (x1 + x2) / 2, (y1 + y2) / 2)
+
+                text_x = x2_edge - (x2_edge - x1_edge) / 4
+                text_y = y2_edge - (y2_edge - y1_edge) / 4
+                self.canvas.coords(transition_text, text_x, text_y)
     
     def clear_inner_circle(self, state_id):
         """Helper function to clear inner circle of a start or final state"""
@@ -232,17 +250,21 @@ class NFAEditor:
     def save_nfa(self):
         nfa = {
             "states": {state_id: {"x": x, "y": y} for state_id, (circle, text, x, y) in self.states.items()},
-            "transitions": [
-                {"from": from_state, "to": to_state, "char": char}
-                for (from_state, to_state), (line, text, char) in self.transitions.items()
-            ],
-            "start_state": self.start_state,
-            "final_states": list(self.final_states)
+            "transitions": []
         }
+
+        for (from_state, to_state), (line, text, chars) in self.transitions.items():
+            for char in chars.split('+'):
+                nfa["transitions"].append({"from": from_state, "to": to_state, "char": char})
+
+        nfa["start_state"] = self.start_state
+        nfa["final_states"] = list(self.final_states)
+
         file_path = filedialog.asksaveasfilename(defaultextension=".json", filetypes=[("JSON files", "*.json")])
         if file_path:
             with open(file_path, 'w') as f:
                 json.dump(nfa, f, indent=4)
+
 
     def load_nfa(self):
         file_path = filedialog.askopenfilename(filetypes=[("JSON files", "*.json")])
@@ -267,8 +289,15 @@ class NFAEditor:
                 self.canvas.tag_bind(state_circle, '<B1-Motion>', lambda event, sid=state_id: self.move_state(event, sid))
                 self.canvas.tag_bind(state_text, '<B1-Motion>', lambda event, sid=state_id: self.move_state(event, sid))
 
+            transition_dict = {}
             for transition in nfa["transitions"]:
                 from_state, to_state, char = transition["from"], transition["to"], transition["char"]
+                if (from_state, to_state) in transition_dict:
+                    transition_dict[(from_state, to_state)] += '+' + char
+                else:
+                    transition_dict[(from_state, to_state)] = char
+
+            for (from_state, to_state), chars in transition_dict.items():
                 x1, y1 = self.states[from_state][2], self.states[from_state][3]
                 x2, y2 = self.states[to_state][2], self.states[to_state][3]
 
@@ -280,9 +309,11 @@ class NFAEditor:
                 y2_edge = y2 - 20 * math.sin(angle)
 
                 transition_line = self.canvas.create_line(x1_edge, y1_edge, x2_edge, y2_edge, arrow=tk.LAST)
-                transition_text = self.canvas.create_text((x1 + x2) / 2, (y1 + y2) / 2, text=char, fill='green', font=('Helvetica', 12, 'bold'))
+                text_x = x2_edge - (x2_edge - x1_edge) / 4
+                text_y = y2_edge - (y2_edge - y1_edge) / 4
+                transition_text = self.canvas.create_text(text_x, text_y, text=chars, fill='green', font=('Helvetica', 12, 'bold'))
 
-                self.transitions[(from_state, to_state)] = (transition_line, transition_text, char)
+                self.transitions[(from_state, to_state)] = (transition_line, transition_text, chars)
 
             self.start_state = nfa["start_state"]
             self.final_states = set(nfa["final_states"])
@@ -291,6 +322,7 @@ class NFAEditor:
                 self.update_start_state_circle(self.start_state)
             for final_state in self.final_states:
                 self.update_final_state_circle(final_state)
+
 
     def clear_nfa(self):
         for state_id, (circle, text, x, y) in self.states.items():
