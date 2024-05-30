@@ -1,10 +1,9 @@
 #ifndef AUTOMATON_H_
 #define AUTOMATON_H_
 
+#include <nlohmann/json_fwd.hpp>
 #include <string>
 #include <vector>
-
-#include "nlohmann/json.hpp"
 
 using state_t = int;
 

@@ -1,6 +1,7 @@
 #include "Automaton/Automaton.h"
 
 #include <iostream>
+#include <nlohmann/json.hpp>
 
 static int centers[100][2] = {
     {100, 100}, {140, 100}, {180, 100}, {220, 100}, {260, 100}, {300, 100},

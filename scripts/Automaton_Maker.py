@@ -2,6 +2,9 @@ import tkinter as tk
 from tkinter import simpledialog, messagebox, filedialog
 import math
 import json
+import sys
+sys.path.append('../build/bin')
+import Automaton
 
 class NFAEditor:
     def __init__(self, root):
@@ -41,6 +44,9 @@ class NFAEditor:
 
         self.load_button = tk.Button(self.root, text="Load NFA", command=self.load_nfa)
         self.load_button.pack(side=tk.LEFT)
+
+        self.convert_button = tk.Button(self.root, text="Convert to DFA", command=self.convert_to_dfa)
+        self.convert_button.pack(side=tk.LEFT)
 
     def add_state(self):
         x, y = 100 , 100 
@@ -346,6 +352,48 @@ class NFAEditor:
         self.selected_states.clear()
         self.start_state = None
         self.final_states.clear()
+
+    def convert_to_dfa(self):
+        transitions = []
+        states = list(self.states.keys())
+        for (from_state, to_state), (_, _, chars) in self.transitions.items():
+            for char in chars.split('+'):
+                transitions.append((states.index(from_state), states.index(to_state), char))
+
+        nfa = Automaton.Automaton()
+        for from_state, to_state, char in transitions:
+            nfa.addTransition(from_state, to_state, char)
+        if self.start_state:
+            nfa.setInitialState(states.index(self.start_state))
+        for final_state in self.final_states:
+            nfa.addFinalState(states.index(final_state))
+
+        dfa = nfa.determinize()
+        self.clear_nfa()  # 清空当前的 NFA 图
+        self.load_from_dfa(dfa)  # 加载并显示 DFA
+
+    def load_from_dfa(self, dfa):
+        # 根据 DFA 自动机的状态和转移，重新绘制图形
+        states = dfa.getStates()
+        transitions = dfa.getTransitions()
+
+        for state_id in states:
+            self.add_state()
+
+        for transition in transitions:
+            from_state, to_state, char = transition
+            self.selected_states = [from_state, to_state]
+            self.add_transition(char)
+
+        start_state = dfa.getInitialState()
+        if start_state is not None:
+            self.start_state = start_state
+            self.update_start_state_circle(start_state)
+
+        final_states = dfa.getFinalStates()
+        for final_state in final_states:
+            self.final_states.add(final_state)
+            self.update_final_state_circle(final_state)
 
 if __name__ == "__main__":
     root = tk.Tk()
