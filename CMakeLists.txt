@@ -11,3 +11,10 @@ add_library(
     src/Automaton.cpp
 )
 target_include_directories(Automaton PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
+
+add_executable(
+    NFA2DFA
+    src/main.cpp
+)
+target_include_directories(NFA2DFA PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
+target_link_libraries(NFA2DFA Automaton)
