@@ -1,7 +1,7 @@
 #include "Automaton/Automaton.h"
 
+#include <algorithm>
 #include <iostream>
-#include <nlohmann/json.hpp>
 
 static int centers[100][2] = {
     {100, 100}, {140, 100}, {180, 100}, {220, 100}, {260, 100}, {300, 100},
@@ -201,92 +201,6 @@ std::vector<state_t> Automaton::getTransitions(std::vector<state_t> states,
     return nextStates;
 }
 
-nlohmann::json Automaton::to_json()
-{
-    nlohmann::json j;
-    j["start_state"] = "q" + std::to_string(initialState);
-    nlohmann::json final_states_json;
-    for (state_t state : finalStates)
-    {
-        final_states_json.push_back("q" + std::to_string(state));
-    }
-    nlohmann::json transitions_json;
-    for (state_t i = 0; i < transitions.size(); i++)
-    {
-        for (Transition transition : transitions[i])
-        {
-            nlohmann::json transition_json;
-            transition_json["from"] = "q" + std::to_string(i);
-            transition_json["to"] = "q" + std::to_string(transition.to);
-            transition_json["char"] = transition.symbol == '\0'
-                                          ? "ε"
-                                          : std::string(1, transition.symbol);
-            transitions_json.push_back(transition_json);
-        }
-    }
-    j["transitions"] = std::move(transitions_json);
-    j["final_states"] = std::move(final_states_json);
-
-    nlohmann::json state_json;
-    for (state_t state : states)
-    {
-        state_json["q" + std::to_string(state)] = {{"x", centers[state][0]},
-                                                   {"y", centers[state][1]}};
-    }
-    j["states"] = std::move(state_json);
-    return j;
-}
-
-void Automaton::from_json(const nlohmann::json &j)
-{
-    nlohmann::json transitions = j["transitions"];
-    for (const nlohmann::json &transition : transitions)
-    {
-        std::string from_s = transition["from"];
-        std::string to_s = transition["to"];
-        std::string symbol_s = transition["char"];
-
-        state_t from = convertQx2Int(from_s);
-        state_t to = convertQx2Int(to_s);
-
-        if (symbol_s == "ε")
-        {
-            addTransition(from, to, '\0');
-        }
-        else
-        {
-            addTransition(from, to, symbol_s[0]);
-        }
-    }
-
-    setInitialState(convertQx2Int(j["start_state"]));
-
-    nlohmann::json final_states = j["final_states"];
-    for (const nlohmann::json &final_state : final_states)
-    {
-        addFinalState(convertQx2Int(final_state));
-    }
-}
-
-void Automaton::output()
-{
-    std::cout << "Initial state: " << initialState << std::endl;
-    std::cout << "Final states: ";
-    for (state_t state : finalStates)
-    {
-        std::cout << state << " ";
-    }
-    std::cout << std::endl;
-    for (state_t i = 0; i < transitions.size(); i++)
-    {
-        for (Transition transition : transitions[i])
-        {
-            std::cout << i << " -> " << transition.to << " on "
-                      << transition.symbol << std::endl;
-        }
-    }
-}
-
 Automaton Automaton::determinize()
 {
     if (isDeterministic())
@@ -365,3 +279,12 @@ Automaton Automaton::determinize()
     }
     return Automaton(newTransitions, newFinalStates, initialStateIndex);
 }
+
+std::vector<state_t> Automaton::getStates() { return states; }
+
+std::vector<std::vector<Transition>> Automaton::getTransitions()
+{
+    return transitions;
+}
+
+std::vector<state_t> Automaton::getFinalStates() { return finalStates; }

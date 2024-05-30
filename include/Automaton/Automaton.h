@@ -1,7 +1,6 @@
 #ifndef AUTOMATON_H_
 #define AUTOMATON_H_
 
-#include <nlohmann/json_fwd.hpp>
 #include <string>
 #include <vector>
 
@@ -43,12 +42,11 @@ class Automaton
     std::vector<state_t> getTransitions(std::vector<state_t> states,
                                         char symbol);
 
-    nlohmann::json to_json();
-    void from_json(const nlohmann::json &j);
-
-    void output();
-
     Automaton determinize();
+
+    std::vector<state_t> getStates();
+    std::vector<std::vector<Transition>> getTransitions();
+    std::vector<state_t> getFinalStates();
 };
 
 #endif  // AUTOMATON_H_

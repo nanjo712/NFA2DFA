@@ -1,15 +1,40 @@
+import os
+current_file_path = os.path.abspath(__file__)
+current_dir = os.path.dirname(current_file_path)
+
+import sys 
+sys.path.append(current_dir + "\\..\\python_package")
+
 import tkinter as tk
 from tkinter import simpledialog, messagebox, filedialog
 import math
 import json
-import sys
-sys.path.append('../build/bin')
-import Automaton
+import Automaton_bindings as Automaton
 
+centers = [
+    [100, 100], [140, 100], [180, 100], [220, 100], [260, 100], [300, 100],
+    [340, 100], [380, 100], [420, 100], [460, 100], [100, 140], [140, 140],
+    [180, 140], [220, 140], [260, 140], [300, 140], [340, 140], [380, 140],
+    [420, 140], [460, 140], [100, 180], [140, 180], [180, 180], [220, 180],
+    [260, 180], [300, 180], [340, 180], [380, 180], [420, 180], [460, 180],
+    [100, 220], [140, 220], [180, 220], [220, 220], [260, 220], [300, 220],
+    [340, 220], [380, 220], [420, 220], [460, 220], [100, 260], [140, 260],
+    [180, 260], [220, 260], [260, 260], [300, 260], [340, 260], [380, 260],
+    [420, 260], [460, 260], [100, 300], [140, 300], [180, 300], [220, 300],
+    [260, 300], [300, 300], [340, 300], [380, 300], [420, 300], [460, 300],
+    [100, 340], [140, 340], [180, 340], [220, 340], [260, 340], [300, 340],
+    [340, 340], [380, 340], [420, 340], [460, 340], [100, 380], [140, 380],
+    [180, 380], [220, 380], [260, 380], [300, 380], [340, 380], [380, 380],
+    [420, 380], [460, 380], [100, 420], [140, 420], [180, 420], [220, 420],
+    [260, 420], [300, 420], [340, 420], [380, 420], [420, 420], [460, 420],
+    [100, 460], [140, 460], [180, 460], [220, 460], [260, 460], [300, 460],
+    [340, 460], [380, 460], [420, 460], [460, 460]
+]
+ 
 class NFAEditor:
     def __init__(self, root):
         self.root = root
-        self.root.title("NFA Editor")
+        self.root.title("Automaton Converter")
         self.canvas = tk.Canvas(self.root, width=800, height=600, bg='white')
         self.canvas.pack()
 
@@ -39,17 +64,21 @@ class NFAEditor:
         self.set_final_button = tk.Button(self.root, text="Set Final", state=tk.DISABLED, command=self.set_final_state)
         self.set_final_button.pack(side=tk.LEFT)
 
-        self.save_button = tk.Button(self.root, text="Save NFA", command=self.save_nfa)
+        self.save_button = tk.Button(self.root, text="Save Automaton", command=self.save_nfa)
         self.save_button.pack(side=tk.LEFT)
 
-        self.load_button = tk.Button(self.root, text="Load NFA", command=self.load_nfa)
+        self.load_button = tk.Button(self.root, text="Load Automaton", command=self.load_nfa)
         self.load_button.pack(side=tk.LEFT)
 
         self.convert_button = tk.Button(self.root, text="Convert to DFA", command=self.convert_to_dfa)
         self.convert_button.pack(side=tk.LEFT)
 
     def add_state(self):
-        x, y = 100 , 100 
+        if self.state_counter >= len(centers):
+            print("No more predefined centers available.")
+            return
+
+        x, y = centers[self.state_counter]
         state_id = f"q{self.state_counter}"
         self.state_counter += 1
 
@@ -340,6 +369,9 @@ class NFAEditor:
 
 
     def clear_nfa(self):
+        self.clear_inner_circle(self.start_state)
+        for final_state in self.final_states:
+            self.clear_inner_circle(final_state)
         for state_id, (circle, text, x, y) in self.states.items():
             self.canvas.delete(circle)
             self.canvas.delete(text)
@@ -354,23 +386,27 @@ class NFAEditor:
         self.final_states.clear()
 
     def convert_to_dfa(self):
-        transitions = []
-        states = list(self.states.keys())
-        for (from_state, to_state), (_, _, chars) in self.transitions.items():
-            for char in chars.split('+'):
-                transitions.append((states.index(from_state), states.index(to_state), char))
-
         nfa = Automaton.Automaton()
-        for from_state, to_state, char in transitions:
-            nfa.addTransition(from_state, to_state, char)
-        if self.start_state:
-            nfa.setInitialState(states.index(self.start_state))
-        for final_state in self.final_states:
-            nfa.addFinalState(states.index(final_state))
+        
+        # add transistions
+        for (from_state, to_state), (line, text, chars) in self.transitions.items():
+            for char in chars.split('+'):
+                from_state = int(from_state[1:])
+                to_state = int(to_state[1:])
+                nfa.addTransition(from_state, to_state, char)
 
+        # add start state
+        if self.start_state:
+            nfa.setInitialState(int(self.start_state[1:]))
+        
+        # add final states
+        for final_state in self.final_states:
+            nfa.addFinalState(int(final_state[1:]))
+        
         dfa = nfa.determinize()
-        self.clear_nfa()  # 清空当前的 NFA 图
-        self.load_from_dfa(dfa)  # 加载并显示 DFA
+
+        self.clear_nfa()
+        self.load_from_dfa(dfa)    
 
     def load_from_dfa(self, dfa):
         # 根据 DFA 自动机的状态和转移，重新绘制图形
@@ -380,18 +416,23 @@ class NFAEditor:
         for state_id in states:
             self.add_state()
 
-        for transition in transitions:
-            from_state, to_state, char = transition
-            self.selected_states = [from_state, to_state]
-            self.add_transition(char)
+        for i in range(len(transitions)):
+            src = "q" + str(i)
+            for transition in transitions[i]:
+                dst = "q" + str(transition.to)
+                char = transition.symbol
+                self.selected_states = [src, dst] if src != dst else [src]
+                self.add_transition(char)
 
         start_state = dfa.getInitialState()
+        start_state = "q" + str(start_state)
         if start_state is not None:
             self.start_state = start_state
             self.update_start_state_circle(start_state)
 
         final_states = dfa.getFinalStates()
         for final_state in final_states:
+            final_state = "q" + str(final_state)
             self.final_states.add(final_state)
             self.update_final_state_circle(final_state)
 

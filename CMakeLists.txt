@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.20)
 
 project(NFA2DFA LANGUAGES CXX)
 
-find_package(nlohmann_json CONFIG REQUIRED)
+find_package(Python 3.10 COMPONENTS Interpreter Development REQUIRED)
 find_package(pybind11 CONFIG)
 
 # set output directories to build/bin
@@ -19,15 +19,10 @@ add_library(
     src/Automaton.cpp
 )
 target_include_directories(Automaton PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
-target_link_libraries(Automaton PRIVATE nlohmann_json::nlohmann_json)
 
 pybind11_add_module(Automaton_bindings src/Automaton_bindings.cpp)
 target_link_libraries(Automaton_bindings PRIVATE Automaton)
 target_include_directories(Automaton_bindings PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
-add_executable(
-    NFA2DFA
-    src/main.cpp
-)
-target_include_directories(NFA2DFA PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
-target_link_libraries(NFA2DFA Automaton nlohmann_json::nlohmann_json)
+install(TARGETS Automaton_bindings
+        LIBRARY DESTINATION ${CMAKE_CURRENT_SOURCE_DIR}/python_package)

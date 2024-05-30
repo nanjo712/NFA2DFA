@@ -1,3 +1,5 @@
+#include <pybind11/complex.h>
+#include <pybind11/functional.h>
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 
@@ -5,7 +7,7 @@
 
 namespace py = pybind11;
 
-PYBIND11_MODULE(Automaton, m)
+PYBIND11_MODULE(Automaton_bindings, m)
 {
     py::class_<Transition>(m, "Transition")
         .def(py::init<>())
@@ -35,9 +37,9 @@ PYBIND11_MODULE(Automaton, m)
              py::overload_cast<state_t, char>(&Automaton::getTransitions))
         .def("getTransitions", py::overload_cast<std::vector<state_t>, char>(
                                    &Automaton::getTransitions))
-        .def("to_json", &Automaton::to_json)
-        .def("from_json", &Automaton::from_json)
-        .def("output", &Automaton::output)
         .def("determinize", &Automaton::determinize)
+        .def("getStates", &Automaton::getStates)
+        .def("getTransitions", py::overload_cast<>(&Automaton::getTransitions))
+        .def("getFinalStates", &Automaton::getFinalStates)
         .def_static("convertQx2Int", &Automaton::convertQx2Int);
 }
