@@ -1,15 +1,17 @@
 import os
+import sys
+
 current_file_path = os.path.abspath(__file__)
 current_dir = os.path.dirname(current_file_path)
+parent_dir = os.path.abspath(os.path.join(current_dir, os.pardir))  # Get the parent directory
 
-import sys 
-sys.path.append(current_dir + "\\..\\python_package")
+sys.path.append(os.path.join(parent_dir, 'python_package'))  # Add python_packages to sys.path
 
 import tkinter as tk
 from tkinter import simpledialog, messagebox, filedialog
 import math
 import json
-import Automaton_bindings as Automaton
+import Automaton_bindings as Automaton # type: ignore
 
 centers = [
     [100, 100], [140, 100], [180, 100], [220, 100], [260, 100], [300, 100],
@@ -161,6 +163,9 @@ class NFAEditor:
 
         if transition_char is None:
             transition_char = simpledialog.askstring("Input", "Enter transition character (leave empty for ε):")
+            # deal with cancel 
+            if transition_char is None:
+                return
             if transition_char == "":
                 transition_char = "ε"
 
@@ -386,6 +391,14 @@ class NFAEditor:
         self.final_states.clear()
 
     def convert_to_dfa(self):
+        if self.start_state is None:
+            messagebox.showerror("Error", "No start state selected.")
+            return
+        
+        if self.transitions == {}:  # 没有转移
+            messagebox.showerror("Error", "No transitions added.")
+            return
+
         nfa = Automaton.Automaton()
         
         # add transistions
@@ -393,6 +406,8 @@ class NFAEditor:
             for char in chars.split('+'):
                 from_state = int(from_state[1:])
                 to_state = int(to_state[1:])
+                if char == "ε":
+                    char = '\0'
                 nfa.addTransition(from_state, to_state, char)
 
         # add start state
@@ -409,7 +424,6 @@ class NFAEditor:
         self.load_from_dfa(dfa)    
 
     def load_from_dfa(self, dfa):
-        # 根据 DFA 自动机的状态和转移，重新绘制图形
         states = dfa.getStates()
         transitions = dfa.getTransitions()
 

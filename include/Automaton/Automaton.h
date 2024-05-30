@@ -43,6 +43,7 @@ class Automaton
                                         char symbol);
 
     Automaton determinize();
+    void output();
 
     std::vector<state_t> getStates();
     std::vector<std::vector<Transition>> getTransitions();

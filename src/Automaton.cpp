@@ -3,25 +3,6 @@
 #include <algorithm>
 #include <iostream>
 
-static int centers[100][2] = {
-    {100, 100}, {140, 100}, {180, 100}, {220, 100}, {260, 100}, {300, 100},
-    {340, 100}, {380, 100}, {420, 100}, {460, 100}, {100, 140}, {140, 140},
-    {180, 140}, {220, 140}, {260, 140}, {300, 140}, {340, 140}, {380, 140},
-    {420, 140}, {460, 140}, {100, 180}, {140, 180}, {180, 180}, {220, 180},
-    {260, 180}, {300, 180}, {340, 180}, {380, 180}, {420, 180}, {460, 180},
-    {100, 220}, {140, 220}, {180, 220}, {220, 220}, {260, 220}, {300, 220},
-    {340, 220}, {380, 220}, {420, 220}, {460, 220}, {100, 260}, {140, 260},
-    {180, 260}, {220, 260}, {260, 260}, {300, 260}, {340, 260}, {380, 260},
-    {420, 260}, {460, 260}, {100, 300}, {140, 300}, {180, 300}, {220, 300},
-    {260, 300}, {300, 300}, {340, 300}, {380, 300}, {420, 300}, {460, 300},
-    {100, 340}, {140, 340}, {180, 340}, {220, 340}, {260, 340}, {300, 340},
-    {340, 340}, {380, 340}, {420, 340}, {460, 340}, {100, 380}, {140, 380},
-    {180, 380}, {220, 380}, {260, 380}, {300, 380}, {340, 380}, {380, 380},
-    {420, 380}, {460, 380}, {100, 420}, {140, 420}, {180, 420}, {220, 420},
-    {260, 420}, {300, 420}, {340, 420}, {380, 420}, {420, 420}, {460, 420},
-    {100, 460}, {140, 460}, {180, 460}, {220, 460}, {260, 460}, {300, 460},
-    {340, 460}, {380, 460}, {420, 460}, {460, 460}};
-
 static void check_and_add(std::vector<state_t> &states, state_t state)
 {
     if (std::find(states.begin(), states.end(), state) == states.end())
@@ -52,6 +33,13 @@ Automaton::Automaton(std::vector<std::vector<Transition>> transitions,
             check_and_add(states, transition.to);
         }
     }
+
+    for (state_t state : finalStates)
+    {
+        check_and_add(states, state);
+    }
+
+    check_and_add(states, initialState);
 };
 
 void Automaton::addTransition(state_t from, state_t to, char symbol)
@@ -96,6 +84,10 @@ bool Automaton::isDeterministic()
         std::vector<char> symbols;
         for (Transition transition : stateTransitions)
         {
+            if (transition.symbol == '\0')
+            {
+                return false;
+            }
             if (std::find(symbols.begin(), symbols.end(), transition.symbol) !=
                 symbols.end())
             {
@@ -288,3 +280,27 @@ std::vector<std::vector<Transition>> Automaton::getTransitions()
 }
 
 std::vector<state_t> Automaton::getFinalStates() { return finalStates; }
+
+void Automaton::output()
+{
+    std::cout << "States: ";
+    for (state_t state : states)
+    {
+        std::cout << state << " ";
+    }
+    std::cout << "\nInitial state: " << initialState << std::endl;
+    std::cout << "Final states: ";
+    for (state_t state : finalStates)
+    {
+        std::cout << state << " ";
+    }
+    std::cout << std::endl;
+    for (state_t i = 0; i < transitions.size(); i++)
+    {
+        for (Transition transition : transitions[i])
+        {
+            std::cout << i << " -> " << transition.to << " on "
+                      << transition.symbol << std::endl;
+        }
+    }
+}

@@ -20,9 +20,17 @@ add_library(
 )
 target_include_directories(Automaton PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
-pybind11_add_module(Automaton_bindings src/Automaton_bindings.cpp)
-target_link_libraries(Automaton_bindings PRIVATE Automaton)
-target_include_directories(Automaton_bindings PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
+add_executable(
+    NFA2DFA
+    src/main.cpp
+)
+target_link_libraries(NFA2DFA PRIVATE Automaton)
 
-install(TARGETS Automaton_bindings
-        LIBRARY DESTINATION ${CMAKE_CURRENT_SOURCE_DIR}/python_package)
+if (CMAKE_BUILD_TYPE STREQUAL "Release")
+    pybind11_add_module(Automaton_bindings src/Automaton_bindings.cpp)
+    target_link_libraries(Automaton_bindings PRIVATE Automaton)
+    target_include_directories(Automaton_bindings PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
+
+    install(TARGETS Automaton_bindings
+            LIBRARY DESTINATION ${CMAKE_CURRENT_SOURCE_DIR}/python_package)
+endif()
