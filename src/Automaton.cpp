@@ -31,7 +31,7 @@ static void check_and_add(std::vector<state_t> &states, state_t state)
 
 int Automaton::convertQx2Int(std::string q) { return std::stoi(q.substr(1)); }
 
-Automaton::Automaton() {};
+Automaton::Automaton(){};
 
 Automaton::Automaton(std::vector<std::vector<Transition>> transitions,
                      std::vector<state_t> finalStates, state_t initialState)
@@ -77,6 +77,7 @@ state_t Automaton::getInitialState() { return initialState; }
 
 state_t Automaton::getNextState(state_t state, char symbol)
 {
+    if (transitions.size() <= state) return -1;
     for (Transition transition : transitions[state])
     {
         if (transition.symbol == symbol)
@@ -130,6 +131,7 @@ std::vector<state_t> Automaton::getEpsilonClosure(state_t state)
     closure.push_back(state);
     for (state_t i = 0; i < closure.size(); i++)
     {
+        if (transitions.size() <= closure[i]) continue;
         for (Transition transition : transitions[closure[i]])
         {
             if (transition.symbol == '\0' &&
@@ -140,6 +142,7 @@ std::vector<state_t> Automaton::getEpsilonClosure(state_t state)
             }
         }
     }
+    std::sort(closure.begin(), closure.end());
     return closure;
 }
 
@@ -158,12 +161,14 @@ std::vector<state_t> Automaton::getEpsilonClosure(std::vector<state_t> states)
             }
         }
     }
+    std::sort(closure.begin(), closure.end());
     return closure;
 }
 
 std::vector<state_t> Automaton::getTransitions(state_t state, char symbol)
 {
     std::vector<state_t> nextStates;
+    if (transitions.size() <= state) return nextStates;
     for (Transition transition : transitions[state])
     {
         if (transition.symbol == symbol)
@@ -171,6 +176,7 @@ std::vector<state_t> Automaton::getTransitions(state_t state, char symbol)
             nextStates.push_back(transition.to);
         }
     }
+    std::sort(nextStates.begin(), nextStates.end());
     return nextStates;
 }
 
@@ -190,6 +196,7 @@ std::vector<state_t> Automaton::getTransitions(std::vector<state_t> states,
             }
         }
     }
+    std::sort(nextStates.begin(), nextStates.end());
     return nextStates;
 }
 
@@ -295,6 +302,7 @@ Automaton Automaton::determinize()
         std::vector<char> symbols;
         for (state_t state : newStates[i])
         {
+            if (transitions.size() <= state) continue;
             for (Transition transition : transitions[state])
             {
                 if (transition.symbol == '\0')
@@ -341,5 +349,18 @@ Automaton Automaton::determinize()
     auto initialStateIndex =
         std::find(newStates.begin(), newStates.end(), initialState) -
         newStates.begin();
+    for (auto &newState : newStates)
+    {
+        std::cout << "New state: "
+                  << std::distance(newStates.begin(),
+                                   std::find(newStates.begin(), newStates.end(),
+                                             newState))
+                  << " with ";
+        for (auto state : newState)
+        {
+            std::cout << state << " ";
+        }
+        std::cout << std::endl;
+    }
     return Automaton(newTransitions, newFinalStates, initialStateIndex);
 }

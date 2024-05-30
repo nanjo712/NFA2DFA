@@ -74,7 +74,7 @@ class NFAEditor:
 
         if len(self.selected_states) == 1:
             self.delete_state_button.config(state=tk.NORMAL)
-            self.add_transition_button.config(state=tk.DISABLED)
+            self.add_transition_button.config(state=tk.NORMAL)  # 允许在选中一个状态时添加转移
             self.set_start_button.config(state=tk.NORMAL)
             self.set_final_button.config(state=tk.NORMAL)
         elif len(self.selected_states) == 2:
@@ -91,6 +91,7 @@ class NFAEditor:
     def delete_state(self):
         if len(self.selected_states) == 1:
             state_id = self.selected_states.pop()
+            self.clear_inner_circle(state_id)
             self.canvas.delete(self.states[state_id][0])
             self.canvas.delete(self.states[state_id][1])
             del self.states[state_id]
@@ -115,16 +116,39 @@ class NFAEditor:
             self.set_start_button.config(state=tk.DISABLED)
             self.set_final_button.config(state=tk.DISABLED)
 
-    def add_transition(self):
-        if len(self.selected_states) == 2:
+    def add_transition(self, transition_char=None):
+        if len(self.selected_states) == 1:
+            from_state = to_state = self.selected_states[0]
+        elif len(self.selected_states) == 2:
             from_state, to_state = self.selected_states
+        else:
+            return
+
+        if transition_char is None:
             transition_char = simpledialog.askstring("Input", "Enter transition character (leave empty for ε):")
             if transition_char == "":
                 transition_char = "ε"
 
-            x1, y1 = self.states[from_state][2], self.states[from_state][3]
-            x2, y2 = self.states[to_state][2], self.states[to_state][3]
+        x1, y1 = self.states[from_state][2], self.states[from_state][3]
+        x2, y2 = self.states[to_state][2], self.states[to_state][3]
 
+        if from_state == to_state:
+            if (from_state, to_state) in self.transitions:
+                existing_transition, existing_text, existing_chars = self.transitions[(from_state, to_state)]
+                if transition_char in existing_chars:
+                    return
+                else:
+                    new_chars = existing_chars + "+" + transition_char
+                    self.canvas.itemconfig(existing_text, text=new_chars)
+                    self.transitions[(from_state, to_state)] = (existing_transition, existing_text, new_chars)
+            else:
+                loop_radius = 30
+                loop = self.canvas.create_oval(x1 - loop_radius, y1 - loop_radius, x1 + loop_radius, y1 + loop_radius, outline='black')
+                text_x = x1
+                text_y = y1 - loop_radius - 10
+                transition_text = self.canvas.create_text(text_x, text_y, text=transition_char, fill='green', font=('Helvetica', 12, 'bold'))
+                self.transitions[(from_state, to_state)] = (loop, transition_text, transition_char)
+        else:
             # Calculate points on the edge of the circles
             angle = math.atan2(y2 - y1, x2 - x1)
             x1_edge = x1 + 20 * math.cos(angle)
@@ -133,18 +157,14 @@ class NFAEditor:
             y2_edge = y2 - 20 * math.sin(angle)
 
             if (from_state, to_state) in self.transitions:
-                # Transition already exists, update the label
                 existing_transition, existing_text, existing_chars = self.transitions[(from_state, to_state)]
                 if transition_char in existing_chars:
-                    # Ignore if the transition character already exists
                     return
                 else:
-                    # Update the existing transition with new characters
                     new_chars = existing_chars + "+" + transition_char
                     self.canvas.itemconfig(existing_text, text=new_chars)
                     self.transitions[(from_state, to_state)] = (existing_transition, existing_text, new_chars)
             else:
-                # Create a new transition
                 transition = self.canvas.create_line(x1_edge, y1_edge, x2_edge, y2_edge, arrow=tk.LAST)
                 text_x = x2_edge - (x2_edge - x1_edge) / 4
                 text_y = y2_edge - (y2_edge - y1_edge) / 4
@@ -152,13 +172,14 @@ class NFAEditor:
 
                 self.transitions[(from_state, to_state)] = (transition, transition_text, transition_char)
 
-            self.canvas.itemconfig(self.states[from_state][0], outline='black')
-            self.canvas.itemconfig(self.states[to_state][0], outline='black')
-            self.selected_states = []
+        self.canvas.itemconfig(self.states[from_state][0], outline='black')
+        self.canvas.itemconfig(self.states[to_state][0], outline='black')
+        self.selected_states = []
 
-            self.add_transition_button.config(state=tk.DISABLED)
-            self.set_start_button.config(state=tk.DISABLED)
-            self.set_final_button.config(state=tk.DISABLED)
+        self.add_transition_button.config(state=tk.DISABLED)
+        self.set_start_button.config(state=tk.DISABLED)
+        self.set_final_button.config(state=tk.DISABLED)
+
 
     def move_state(self, event, state_id):
         x, y = event.x, event.y
@@ -181,18 +202,27 @@ class NFAEditor:
                 x1, y1 = self.states[from_state][2], self.states[from_state][3]
                 x2, y2 = self.states[to_state][2], self.states[to_state][3]
 
-                # Calculate points on the edge of the circles
-                angle = math.atan2(y2 - y1, x2 - x1)
-                x1_edge = x1 + 20 * math.cos(angle)
-                y1_edge = y1 + 20 * math.sin(angle)
-                x2_edge = x2 - 20 * math.cos(angle)
-                y2_edge = y2 - 20 * math.sin(angle)
+                if from_state == to_state:
+                    # Update the self-loop position
+                    loop_radius = 30
+                    self.canvas.coords(transition, x1 - loop_radius, y1 - loop_radius, x1 + loop_radius, y1 + loop_radius)
+                    text_x = x1
+                    text_y = y1 - loop_radius - 10
+                    self.canvas.coords(transition_text, text_x, text_y)
+                else:
+                    # Calculate points on the edge of the circles
+                    angle = math.atan2(y2 - y1, x2 - x1)
+                    x1_edge = x1 + 20 * math.cos(angle)
+                    y1_edge = y1 + 20 * math.sin(angle)
+                    x2_edge = x2 - 20 * math.cos(angle)
+                    y2_edge = y2 - 20 * math.sin(angle)
 
-                self.canvas.coords(transition, x1_edge, y1_edge, x2_edge, y2_edge)
+                    self.canvas.coords(transition, x1_edge, y1_edge, x2_edge, y2_edge)
 
-                text_x = x2_edge - (x2_edge - x1_edge) / 4
-                text_y = y2_edge - (y2_edge - y1_edge) / 4
-                self.canvas.coords(transition_text, text_x, text_y)
+                    # Update the position of the transition text to be closer to the end state
+                    text_x = x2_edge - (x2_edge - x1_edge) / 4
+                    text_y = y2_edge - (y2_edge - y1_edge) / 4
+                    self.canvas.coords(transition_text, text_x, text_y)
     
     def clear_inner_circle(self, state_id):
         """Helper function to clear inner circle of a start or final state"""
@@ -289,31 +319,10 @@ class NFAEditor:
                 self.canvas.tag_bind(state_circle, '<B1-Motion>', lambda event, sid=state_id: self.move_state(event, sid))
                 self.canvas.tag_bind(state_text, '<B1-Motion>', lambda event, sid=state_id: self.move_state(event, sid))
 
-            transition_dict = {}
             for transition in nfa["transitions"]:
                 from_state, to_state, char = transition["from"], transition["to"], transition["char"]
-                if (from_state, to_state) in transition_dict:
-                    transition_dict[(from_state, to_state)] += '+' + char
-                else:
-                    transition_dict[(from_state, to_state)] = char
-
-            for (from_state, to_state), chars in transition_dict.items():
-                x1, y1 = self.states[from_state][2], self.states[from_state][3]
-                x2, y2 = self.states[to_state][2], self.states[to_state][3]
-
-                # Calculate points on the edge of the circles
-                angle = math.atan2(y2 - y1, x2 - x1)
-                x1_edge = x1 + 20 * math.cos(angle)
-                y1_edge = y1 + 20 * math.sin(angle)
-                x2_edge = x2 - 20 * math.cos(angle)
-                y2_edge = y2 - 20 * math.sin(angle)
-
-                transition_line = self.canvas.create_line(x1_edge, y1_edge, x2_edge, y2_edge, arrow=tk.LAST)
-                text_x = x2_edge - (x2_edge - x1_edge) / 4
-                text_y = y2_edge - (y2_edge - y1_edge) / 4
-                transition_text = self.canvas.create_text(text_x, text_y, text=chars, fill='green', font=('Helvetica', 12, 'bold'))
-
-                self.transitions[(from_state, to_state)] = (transition_line, transition_text, chars)
+                self.selected_states = [from_state, to_state] if from_state != to_state else [from_state]
+                self.add_transition(char)
 
             self.start_state = nfa["start_state"]
             self.final_states = set(nfa["final_states"])
