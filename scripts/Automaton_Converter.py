@@ -404,11 +404,11 @@ class NFAEditor:
         # add transistions
         for (from_state, to_state), (line, text, chars) in self.transitions.items():
             for char in chars.split('+'):
-                from_state = int(from_state[1:])
-                to_state = int(to_state[1:])
+                from_int = int(from_state[1:])
+                to_int = int(to_state[1:])
                 if char == "ε":
                     char = '\0'
-                nfa.addTransition(from_state, to_state, char)
+                nfa.addTransition(from_int, to_int, char)
 
         # add start state
         if self.start_state:

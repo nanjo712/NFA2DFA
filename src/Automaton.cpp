@@ -202,8 +202,15 @@ Automaton Automaton::determinize()
     std::vector<std::vector<Transition>> newTransitions;
     std::vector<state_t> newFinalStates;
     std::vector<std::vector<state_t>> newStates;
-    std::vector<state_t> initialState = getEpsilonClosure(this->initialState);
+    std::vector<state_t> initialState = {
+        this->initialState};  // getEpsilonClosure(this->initialState);
     newStates.push_back(initialState);
+    auto closure = getEpsilonClosure(initialState);
+    if (std::any_of(closure.begin(), closure.end(),
+                    [this](state_t state) { return isFinalState(state); }))
+    {
+        newFinalStates.push_back(0);
+    }
     for (state_t i = 0; i < newStates.size(); i++)
     {
         std::vector<char> symbols;
@@ -226,7 +233,7 @@ Automaton Automaton::determinize()
         for (char symbol : symbols)
         {
             std::vector<state_t> nextStates =
-                getTransitions(newStates[i], symbol);
+                getTransitions(getEpsilonClosure(newStates[i]), symbol);
             std::vector<state_t> nextClosure = getEpsilonClosure(nextStates);
             if (nextClosure.empty())
             {
